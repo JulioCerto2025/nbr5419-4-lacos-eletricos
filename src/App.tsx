@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+interface Capture { id: string; x: number; z: number; h: number; type: 'auto' | 'manual' }
 interface Gap { id: string; type: string; size: number; label: string; offset: number; isDPS?: any }
 interface Loop { x: number; y: number; z: number; w: number; h: number; distWall: number; distSide: number; rotY?: number; gaps: Gap[]; material: string }
 

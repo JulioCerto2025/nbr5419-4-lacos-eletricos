@@ -3,9 +3,9 @@ import { Scene } from './components/Scene';
 import { LIGHTNING_TYPES, calculateMaxwellSuperposition, calculateSparkCurrentSuperposed } from './math/physics';
 import { calculateMeshSubdivision, getDownConductorNodes } from './math/subdivision';
 import { 
-  Zap, Box, Grid as GridIcon, Radio, Calculator, 
-  Activity, Shield, Info, Layers, Scissors, Trash2, X,
-  Navigation, Captions, ChevronDown, ChevronRight
+  Zap, Box, Radio, 
+  Layers, Trash2, X,
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -199,30 +199,20 @@ function App() {
      });
   }, [spda.meshCols, spda.meshRows, spda.downs, movedDowns]);
 
-  const handleArrowMoveDown = useCallback((id: string, dir: number) => {
-      const down = explicitDowns.find(d => d.id === id);
-      if (!down) return;
-      const mc = spda.meshCols, mr = spda.meshRows;
-      let L = 0;
-      if (down.r === mr) L = down.c;
-      else if (down.c === mc) L = mc + (mr - down.r);
-      else if (down.r === 0) L = mc + mr + (mc - down.c);
-      else if (down.c === 0) L = 2*mc + mr + down.r;
-      
-      L += dir * 0.2; // Move in fractions to allow breaking out of snap visually
-      const maxL = 2*(mc+mr);
-      L = ((L % maxL) + maxL) % maxL;
-
-      // Soft snap for arrows as well
-      if (Math.abs(L - Math.round(L)) < 0.15) L = Math.round(L);
-
-      let fc = 0, fr = 0;
-      if (L <= mc) { fc = L; fr = mr; }
-      else if (L <= mc + mr) { fc = mc; fr = mr - (L - mc); }
-      else if (L <= 2*mc + mr) { fc = mc - (L - mc - mr); fr = 0; }
-      else { fc = 0; fr = L - 2*mc - mr; }
-
-      setMovedDowns(prev => ({...prev, [id]: {c: fc, r: fr}}));
+  const handleArrowMoveDown = useCallback((id: string | null, dir: number) => {
+    if (!id) return;
+    setMovedDowns(prev => {
+        const d = prev[id] || explicitDowns.find(curr => curr.id === id);
+        if (!d) return prev;
+        const mc = Math.max(1, spda.meshCols), mr = Math.max(1, spda.meshRows);
+        let nc = d.c, nr = d.r;
+        if (dir === -1) { // Left-ish navigation
+            if (nc > 0) nc--; else if (nr > 0) { nr--; nc = mc; }
+        } else { // Right-ish navigation
+            if (nc < mc) nc++; else if (nr < mr) { nr++; nc = 0; }
+        }
+        return { ...prev, [id]: { c: nc, r: nr } };
+    });
   }, [explicitDowns, spda.meshCols, spda.meshRows]);
 
   const updateGap = useCallback((id: string, updates: any) => {
@@ -445,7 +435,7 @@ function App() {
 
       <main className="main-view h-full w-full">
 
-        <Scene building={building} spda={{ meshesCols: spda.meshCols, meshesRows: spda.meshRows, downs: spda.downs }} loop={loop} isSparking={results.isSparking} captures={allCaptures} lightningHitId={lightningHitId} lightningValue={lightning.I} lightningModeActive={simulationActive} explicitDowns={explicitDowns} onMoveDown={(id,c,r) => setMovedDowns(prev => ({...prev, [id]: {c, r}}))} onArrowMoveDown={handleArrowMoveDown} selectedDownId={selectedDownId} onSelectDown={setSelectedDownId} onSetHitPoint={id => simulationActive && setLightningHitId(id)} onSetGapOffset={(id, off) => updateGap(id, {offset: off})} selectedGapId={selectedGapId} onSetSelectedGapId={(id) => { setSelectedGapId(id); if(id) setShowLoopEditor(true); }} subdivision={subdivision} onClickLoop={() => setShowLoopEditor(true)} />
+        <Scene building={building} spda={{ meshesCols: spda.meshCols, meshesRows: spda.meshRows, downs: spda.downs }} loop={{...loop, dist: 0.1}} isSparking={results.isSparking} captures={allCaptures} lightningHitId={lightningHitId} lightningValue={lightning.I} lightningModeActive={simulationActive} explicitDowns={explicitDowns} onMoveDown={(id,c,r) => setMovedDowns(prev => ({...prev, [id]: {c, r}}))} onArrowMoveDown={handleArrowMoveDown} selectedDownId={selectedDownId} onSelectDown={setSelectedDownId} onSetHitPoint={id => simulationActive && setLightningHitId(id)} onSetGapOffset={(id, off) => updateGap(id, {offset: off})} selectedGapId={selectedGapId} onSetSelectedGapId={(id) => { setSelectedGapId(id); if(id) setShowLoopEditor(true); }} subdivision={subdivision} onClickLoop={() => setShowLoopEditor(true)} />
         
         {showLoopEditor && (
             <motion.div drag dragMomentum={false} initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="loop-toolpalet">
@@ -485,7 +475,7 @@ function App() {
                             </div>
                         ))}
                     </div>
-                        <button onClick={() => { const id=`g-${Date.now()}`; setLoop({...loop, gaps: [...loop.gaps, { id, type:'socket', size:3, label:`GAP ${loop.gaps.length + 1}`, offset:0.5}]}); setSelectedGapId(id); }} className="w-full py-2 mt-2 bg-primary/10 border border-primary/20 rounded text-primary text-[9px] font-black uppercase">ADICIONAR GAP</button>
+                        <button onClick={() => { const id=`g-${Date.now()}`; setLoop({...loop, gaps: [...loop.gaps, { id, type:'socket', size:3, label:`GAP ${loop.gaps.length + 1}`, offset:0.5, isDPS: false}]}); setSelectedGapId(id); }} className="w-full py-2 mt-2 bg-primary/10 border border-primary/20 rounded text-primary text-[9px] font-black uppercase">ADICIONAR GAP</button>
                     </div>
                 <div className="mt-4 pt-2 border-t border-white/10 text-[8px] text-center text-text-dim italic">Arraste esta janela para qualquer lugar</div>
             </motion.div>

@@ -1,17 +1,14 @@
-import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { 
   OrbitControls, 
   PerspectiveCamera, 
   Grid, 
-  Text, 
-  Billboard,
   Html,
   ContactShadows,
   Line,
 } from '@react-three/drei';
 import * as THREE from 'three';
-import { getDownConductorNodes } from '../math/subdivision';
 
 const MagnetoElectricField = ({ start, end, intensity, color }: any) => {
     const groupRef = useRef<THREE.Group>(null);
@@ -354,11 +351,6 @@ const SPDACore = (props: SceneProps & { setLockControls: (v: boolean) => void })
         });
     }, [props.explicitDowns, bw, bd, mc, mr]);
 
-    const _getKcForEdge = (_i: number, _isCol: boolean, isDown?: boolean) => {
-        if (!props.subdivision) return null;
-        if (isDown) return props.subdivision.minKc; 
-        return null;
-    };
 
     return (
         <group>

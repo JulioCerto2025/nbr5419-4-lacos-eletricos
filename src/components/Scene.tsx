@@ -78,6 +78,9 @@ interface SceneProps {
   loop: { 
     x: number; y: number; z: number; w: number; h: number; dist: number; 
     gaps: { id: string; type: string; size: number; label: string; offset: number; isDPS?: boolean }[];
+    distWall: number;
+    distSide: number;
+    rotY?: number;
   };
   isSparking: boolean;
   lightningHitId: string | null;
@@ -86,12 +89,14 @@ interface SceneProps {
   onSetHitPoint: (id: string | null) => void;
   onSetGapOffset: (id: string, offset: number) => void;
   selectedGapId: string | null;
+  onSetSelectedGapId: (id: string | null) => void;
   explicitDowns: { id: string, c: number, r: number }[];
   onMoveDown: (id: string, c: number, r: number) => void;
   onArrowMoveDown: (id: string, dir: number) => void;
   selectedDownId: string | null;
   onSelectDown: (id: string | null) => void;
   onClickLoop?: () => void;
+  subdivision?: any;
 }
 
 const LightningStrike = ({ start, end }: { start: [number, number, number], end: [number, number, number] }) => {
@@ -120,39 +125,6 @@ const LightningStrike = ({ start, end }: { start: [number, number, number], end:
     );
 };
 
-const MicroSpark = ({ position }: { position: [number, number, number] }) => {
-    const [pts, setPts] = useState<[number, number, number][]>([]);
-    useFrame((state) => {
-        const time = state.clock.elapsedTime;
-        if (time % 0.05 > 0.025) {
-            const m: [number, number, number][] = [];
-            const r = 0.15;
-            for (let i = 0; i < 5; i++) {
-                m.push([
-                    (Math.random() - 0.5) * r,
-                    (Math.random() - 0.5) * r,
-                    (Math.random() - 0.5) * r
-                ]);
-            }
-            setPts(m);
-        } else {
-            setPts([]);
-        }
-    });
-
-    if (pts.length === 0) return null;
-
-    return (
-        <group position={position}>
-            <Line points={pts} color="#00ffff" lineWidth={2} transparent opacity={0.8} />
-            <pointLight intensity={10} distance={2} color="#00ffff" />
-            <mesh>
-                <sphereGeometry args={[0.04]} />
-                <meshStandardMaterial color="#fff" emissive="#00ffff" emissiveIntensity={20} />
-            </mesh>
-        </group>
-    );
-};
 
 const Conductor = ({ start, end, label, visible, thickness = 1, color: customColor, kc }: any) => {
     // Designer logic: Aggressive scaling to emphasize electrical physics
@@ -242,7 +214,7 @@ const DraggableGap = ({ gap, loopW, loopH, onDrag, onSelect, isSelected, setLock
     const onPointerDown = (e: any) => { e.stopPropagation(); setIsDragging(true); onSelect(gap.id); setLockControls(true); };
     const onGlobalUp = useCallback(() => { setIsDragging(false); setLockControls(false); }, [setLockControls]);
 
-    const onPointerMove = (e: any) => {
+    const onPointerMove = (_e: any) => {
         if (!isDragging || !groupRef.current) return;
         const worldPos = groupRef.current.parent!.getWorldPosition(new THREE.Vector3());
         const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -worldPos.z);
@@ -315,7 +287,7 @@ const DraggableDownNode = ({ p, isActive, dkc, dkA, setLockControls, onMove, mc,
     };
     const onGlobalUp = useCallback(() => { setIsDragging(false); setLockControls(false); }, [setLockControls]);
 
-    const onPointerMove = (e: any) => {
+    const onPointerMove = (_e: any) => {
         if (!isDragging || disabled) return;
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(bh));
         const target = new THREE.Vector3();
@@ -382,7 +354,7 @@ const SPDACore = (props: SceneProps & { setLockControls: (v: boolean) => void })
         });
     }, [props.explicitDowns, bw, bd, mc, mr]);
 
-    const getKcForEdge = (i: number, isCol: boolean, isDown?: boolean) => {
+    const _getKcForEdge = (_i: number, _isCol: boolean, isDown?: boolean) => {
         if (!props.subdivision) return null;
         if (isDown) return props.subdivision.minKc; 
         return null;
@@ -398,7 +370,7 @@ const SPDACore = (props: SceneProps & { setLockControls: (v: boolean) => void })
             {Array.from({length: mr+1}).map((_, j) => (<Conductor key={`zm-${j}`} start={[-bw/2, bh, -(bd/2)+(j*(bd/mr))]} end={[bw/2, bh, -(bd/2)+(j*(bd/mr))]} visible={false} thickness={1} />))}
 
             {/* Active Current Subdivision Rendering (Expert Physicist Model) */}
-            {props.subdivision?.paths.map((p, idx) => {
+            {props.subdivision?.paths.map((p: any, idx: number) => {
                 const s = [-(bw/2)+p.from[0]*(bw/mc), bh, -(bd/2)+p.from[1]*(bd/mr)];
                 const e = [-(bw/2)+p.to[0]*(bw/mc), bh, -(bd/2)+p.to[1]*(bd/mr)];
                 const iVal = p.kc * props.lightningValue;
@@ -406,7 +378,7 @@ const SPDACore = (props: SceneProps & { setLockControls: (v: boolean) => void })
                 return <Conductor key={`sub-${idx}`} start={s} end={e} label={label} visible={true} kc={p.kc} thickness={2} />;
             })}
 
-            {downsPositions.map((p, i) => {
+            {downsPositions.map((p: any) => {
                 const isActive = !!props.lightningHitId;
                 let dkc = 1 / props.spda.downs;
                 if (isActive && props.subdivision?.downCurrents) {
@@ -425,7 +397,7 @@ const SPDACore = (props: SceneProps & { setLockControls: (v: boolean) => void })
                     />
                 );
             })}
-            {props.captures.map(cap => {
+            {props.captures.map((cap: any) => {
                 const isHit = cap.id === props.lightningHitId, active = props.lightningModeActive;
                 const h = cap.h || 0;
                 return (
@@ -473,7 +445,7 @@ const SPDACore = (props: SceneProps & { setLockControls: (v: boolean) => void })
                 <Line points={[[-props.loop.w/2, -props.loop.h/2, 0], [props.loop.w/2, -props.loop.h/2, 0], [props.loop.w/2, props.loop.h/2, 0], [-props.loop.w/2, props.loop.h/2, 0], [-props.loop.w/2, -props.loop.h/2, 0]]} color={props.isSparking ? "#ff0000" : (props.loop.gaps.some(g=>g.isDPS) ? "#00ffff" : "#ff6600")} lineWidth={4} />
                 
                 {/* Visualizadores de Gaps/Pontos de Ruptura completos e interativos */}
-                {props.loop.gaps.map(gap => (
+                {props.loop.gaps.map((gap: any) => (
                     <DraggableGap 
                         key={gap.id} 
                         gap={gap} 

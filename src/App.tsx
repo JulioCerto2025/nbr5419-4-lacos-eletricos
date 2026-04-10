@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface Capture { id: string; x: number; z: number; h: number; type: 'auto' | 'manual' }
+interface Gap { id: string; type: string; size: number; label: string; offset: number; isDPS?: any }
+interface Loop { x: number; y: number; z: number; w: number; h: number; distWall: number; distSide: number; rotY?: number; gaps: Gap[]; material: string }
 
 const CompactSlider = ({ label, value, min, max, step, onChange, unit = '', disabled }: any) => {
     const [localVal, setLocalVal] = useState(value.toString());
@@ -173,13 +174,13 @@ function App() {
   }, [building.width, building.depth, building.level]);
 
 
-  const [loop, setLoop] = useState({ 
+  const [loop, setLoop] = useState<Loop>({ 
     x: 0, y: 3.5, z: 0, w: 4, h: 2.5, 
     distWall: 1.5,  // S1: Parallel distance
     distSide: 2.0,  // S2: Perpendicular distance
     rotY: 0,
-    gaps: [{ id: 'g1', type: 'socket', size: 3, label: 'GAP 1', offset: 0.5 }],
-    material: 'copper' as const
+    gaps: [{ id: 'g1', type: 'socket', size: 3, label: 'GAP 1', offset: 0.5, isDPS: false }],
+    material: 'copper'
   });
 
   const [selectedDownId, setSelectedDownId] = useState<string | null>(null);
@@ -299,9 +300,10 @@ function App() {
         loop.rotY || 0
     );
 
-    const totalGap = loop.gaps.filter(g => !g.isDPS).reduce((sum, g) => sum + g.size, 0);
+    const gapsArr = loop.gaps as any[];
+    const totalGap = gapsArr.filter(g => !g.isDPS).reduce((sum, g) => sum + g.size, 0);
     const u_safe = totalGap * 3000;
-    const hasActiveDPS = loop.gaps.some(g => g.isDPS);
+    const hasActiveDPS = gapsArr.some(g => g.isDPS);
     const isSparking = !hasActiveDPS && totalGap > 0 && uoc > u_safe;
     const isLoopClosed = hasActiveDPS || isSparking || totalGap === 0;
     
@@ -435,7 +437,7 @@ function App() {
 
       <main className="main-view h-full w-full">
 
-        <Scene building={building} spda={{ meshesCols: spda.meshCols, meshesRows: spda.meshRows, downs: spda.downs }} loop={{...loop, dist: 0.1}} isSparking={results.isSparking} captures={allCaptures} lightningHitId={lightningHitId} lightningValue={lightning.I} lightningModeActive={simulationActive} explicitDowns={explicitDowns} onMoveDown={(id,c,r) => setMovedDowns(prev => ({...prev, [id]: {c, r}}))} onArrowMoveDown={handleArrowMoveDown} selectedDownId={selectedDownId} onSelectDown={setSelectedDownId} onSetHitPoint={id => simulationActive && setLightningHitId(id)} onSetGapOffset={(id, off) => updateGap(id, {offset: off})} selectedGapId={selectedGapId} onSetSelectedGapId={(id) => { setSelectedGapId(id); if(id) setShowLoopEditor(true); }} subdivision={subdivision} onClickLoop={() => setShowLoopEditor(true)} />
+        <Scene building={building} spda={{ meshesCols: spda.meshCols, meshesRows: spda.meshRows, downs: spda.downs }} loop={{...loop, dist: 0.1} as any} isSparking={results.isSparking} captures={allCaptures} lightningHitId={lightningHitId} lightningValue={lightning.I} lightningModeActive={simulationActive} explicitDowns={explicitDowns} onMoveDown={(id,c,r) => setMovedDowns(prev => ({...prev, [id]: {c, r}}))} onArrowMoveDown={handleArrowMoveDown} selectedDownId={selectedDownId} onSelectDown={setSelectedDownId} onSetHitPoint={id => simulationActive && setLightningHitId(id)} onSetGapOffset={(id, off) => updateGap(id, {offset: off})} selectedGapId={selectedGapId} onSetSelectedGapId={(id) => { setSelectedGapId(id); if(id) setShowLoopEditor(true); }} subdivision={subdivision} onClickLoop={() => setShowLoopEditor(true)} />
         
         {showLoopEditor && (
             <motion.div drag dragMomentum={false} initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="loop-toolpalet">

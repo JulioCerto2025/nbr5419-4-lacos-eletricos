@@ -89,7 +89,7 @@ interface SceneProps {
   onSetSelectedGapId: (id: string | null) => void;
   explicitDowns: { id: string, c: number, r: number }[];
   onMoveDown: (id: string, c: number, r: number) => void;
-  onArrowMoveDown: (id: string, dir: number) => void;
+  onArrowMoveDown: (id: any, dir: number) => void;
   selectedDownId: string | null;
   onSelectDown: (id: string | null) => void;
   onClickLoop?: () => void;
